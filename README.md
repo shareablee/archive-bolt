@@ -1,6 +1,6 @@
 # archive-bolt
 
-A Clojure library designed to ... well, that part is up to you.
+Reusable Storm bolt for archiving data. Currently support storing to s3.
 
 ## Usage
 
@@ -8,7 +8,4 @@ FIXME
 
 ## License
 
-Copyright © 2013 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Copyright © 2013 Shareablee
