@@ -36,16 +36,13 @@
                                      :mock-sources mock-sources)
           control (get-object creds bucket-name key)
           control-content (-> control :input-stream slurp)]
-      (println "RESULTS" (read-tuples results "2"))
       ;; Verify that the side effect of writing to s3 worked
       (is (= content control-content))
       ;; Clean up
       (println "Deleting test key")
       (delete-object creds bucket-name key)
-      ;; Check the output of the bolt matches expected tuple output
-      
+      ;; Check the output of the bolt matches expected tuple output      
       ;; Order is not guaranteed so we are using the built in storm
       ;; equality function ms= rather than =
-      (is (ms= [[{:etag "f4980a656e3415662d6b22ecde5d1a18"
-                  :content-md5 "9JgKZW40FWYtayLs3l0aGA=="}]]
+      (is (ms= [["s3://stage.shareablee.com/collection/twitter/1.0/test_user_id/test.json"]]
                (read-tuples results "2"))))))
