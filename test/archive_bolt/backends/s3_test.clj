@@ -11,7 +11,7 @@
         content (generate-string {:yo "dawg"})
         result (store key content)
         control (get-object creds bucket-name key)
-        control-str (-> control :input-stream slurp)]
-    (is (= content control-str))
+        control-content (-> control :input-stream slurp)]
+    (is (= content control-content))
     (println "Deleting test s3 key")
     (delete-object creds bucket-name key)))

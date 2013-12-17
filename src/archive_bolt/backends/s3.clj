@@ -10,8 +10,6 @@
 
 (def bucket-name "stage.shareablee.com")
 
-(defn gen-file-name [])
-
 (defn safe-put
   "Attempt to PUT the file to s3 returns a hashmap when successful or 
    nil if unsuccessful. Retries on failure up to max-retries times."
@@ -37,4 +35,5 @@
         file (clojure.java.io/file tmp-path)
         result (safe-put creds bucket-name location file)]
     (clojure.java.io/delete-file tmp-path)
+    (info "DONE!!!!")
     result))
