@@ -15,8 +15,8 @@
                 :location location
                 :content content)
         result (process-request backend location content)]
-    (emit-bolt! collector [result] :anchor tuple)
     ;; If we don't get a result from storage we need to fail the tuple
     (if result
-      (ack! collector tuple)
+      (do (emit-bolt! collector [result] :anchor tuple)
+          (ack! collector tuple))
       (fail! collector tuple))))
