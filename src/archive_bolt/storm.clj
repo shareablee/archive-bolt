@@ -1,13 +1,14 @@
 (ns archive-bolt.storm
   (:use [backtype.storm clojure config]
         [archive-bolt.router :only [process-request]]
+        [archive-bolt.fields :only [archive-output-fields]]
         [taoensso.timbre :as timbre :only (info warn error fatal)]) 
   (:gen-class))
 
 
 ;; Takes a backend, location, and content and emits the location to
 ;; the file archived
-(defbolt archive ["result"]
+(defbolt archive archive-output-fields
   [tuple collector]
   (let [{:keys [backend location content]} tuple
         _ (info "archive args"

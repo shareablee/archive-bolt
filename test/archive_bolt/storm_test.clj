@@ -3,16 +3,15 @@
         [archive-bolt.backends.s3 :only [bucket-name creds]]
         [backtype.storm clojure config testing]
         [amazonica.aws.s3 :only [get-object delete-object]]
-        [archive-bolt.storm :only [archive]])
+        [archive-bolt.storm :only [archive]]
+        [archive-bolt.fields :only [archive-input-fields
+                                    archive-output-fields]])
   (:require [cheshire.core :refer :all]))
 
 
-(def api-archive-fields
-  ["backend" "location" "content"])
-
 ;; This doesn't do anything other than get used as a proxy for mocking
 ;; source tuples to the archive bolt
-(defspout mock-spout api-archive-fields
+(defspout mock-spout archive-input-fields
   [conf context collector]
   nil)
 
@@ -21,7 +20,7 @@
   []
   (topology
    {"1" (spout-spec mock-spout)}
-   {"2" (bolt-spec {"1" api-archive-fields} archive)}))
+   {"2" (bolt-spec {"1" archive-input-fields} archive)}))
 
 (deftest test-archive-bolt
   "Test the topology on a local cluster"
