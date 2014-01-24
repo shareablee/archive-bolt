@@ -20,7 +20,7 @@
   []
   (topology
    {"1" (spout-spec mock-spout)}
-   {"2" (bolt-spec {"1" archive-input-fields} archive)}))
+   {"2" (bolt-spec {"1" :shuffle} archive)}))
 
 (deftest test-archive-bolt
   "Test the topology on a local cluster"

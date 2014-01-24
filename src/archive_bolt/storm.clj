@@ -11,10 +11,10 @@
 (defbolt archive archive-output-fields
   [tuple collector]
   (let [{:keys [backend location content]} tuple
-        _ (info "archive args"
-                :backend backend
-                :location location
-                :content content)
+        _ (debug "archive args"
+                 :backend backend
+                 :location location
+                 :content content)
         result (process-request backend location content)]
     ;; If we don't get a result from storage we need to fail the tuple
     (if result

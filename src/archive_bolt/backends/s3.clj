@@ -8,7 +8,7 @@
             :secret-key "TGSWhTGux3acCr0hnVoRXNYWm3z7W+ajDW0f8Kxy"
             :endpoint   "us-east-1"})
 
-(def bucket-name "stage.shareablee.com")
+(def bucket-name "dev.shareablee.com")
 
 (defn safe-put
   "Attempt to PUT the file to s3 returns full s3 path when successful or 
