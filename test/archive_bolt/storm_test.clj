@@ -43,5 +43,6 @@
       ;; Check the output of the bolt matches expected tuple output      
       ;; Order is not guaranteed so we are using the built in storm
       ;; equality function ms= rather than =
-      (is (ms= [["s3://stage.shareablee.com/collection/twitter/1.0/test_user_id/test.json"]]
+      (is (ms= [[(str "s3://" bucket-name
+                      "/collection/twitter/1.0/test_user_id/test.json")]]
                (read-tuples results "2"))))))
