@@ -7,18 +7,18 @@
 
 
 ;; Takes a backend, location, and content and emits the location to
-;; the file archived
-(defbolt archive archive-output-fields
-  [tuple collector]
-  (let [{:keys [backend location content]} tuple
-        _ (debug "archive args"
-                 :backend backend
-                 :location location
-                 :content content)
-        result (process-request backend location content)]
-    ;; If we don't get a result from storage we need to fail the tuple
-    (if result
-      (do (emit-bolt! collector [result] :anchor tuple)
-          (ack! collector tuple))
-      (do (error "No result returned from backend")
-          (fail! collector tuple)))))
+;; the file archived. When using the s3 backend the bucket to archive
+;; is determined by the configuration property S3_BUCKET
+(defbolt archive archive-output-fields {:prepare true}
+  [conf context collector]
+  (bolt
+   (execute
+    [tuple]
+    (let [{:keys [backend location content]} tuple
+          result (process-request conf backend location content)]
+      ;; If we don't get a result from storage we need to fail the tuple
+      (if result
+        (do (emit-bolt! collector [result] :anchor tuple)
+            (ack! collector tuple))
+        (do (error "No result returned from backend")
+            (fail! collector tuple)))))))

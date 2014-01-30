@@ -30,8 +30,13 @@
           ;; This becomes the input to the archive bolt
           mock-sources {"1" [["s3" key content]]}
           topo (mk-test-topology)
+          conf {"AWS_ACCESS_KEY_ID" "AKIAIPOBJD5JETWYK7TA"
+                "AWS_SECRET_ACCESS_KEY" "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"
+                "AWS_S3_REGION" "us-east-1"
+                "S3_BUCKET" "dev.shareablee.com"}
           results (complete-topology cluster
                                      topo
+                                     :storm-conf conf
                                      :mock-sources mock-sources)
           control (get-object creds bucket-name key)
           control-content (-> control :input-stream slurp)]

@@ -10,8 +10,9 @@
 (defn valid? [])
 
 (defn process-request
-  "Route the request to the correct storage handler"
-  [backend location content]
+  "Route the request to the correct storage handler. Conf is a storm 
+   Config instance."
+  [conf backend location content]
   (let [handler (get handlers backend)]
     (handler location content)))
 

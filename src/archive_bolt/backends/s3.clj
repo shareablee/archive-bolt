@@ -4,12 +4,6 @@
         amazonica.aws.s3transfer))
 
 
-(def creds {:access-key "AKIAIUBLJXHPDXHG5PFQ"
-            :secret-key "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"
-            :endpoint   "us-east-1"})
-
-(def bucket-name "dev.shareablee.com")
-
 (defn safe-put
   "Attempt to PUT the file to s3 returns full s3 path when successful or 
    nil if unsuccessful. Retries on failure up to max-retries times."
@@ -28,12 +22,18 @@
                                 (error "safe-put failed to store to s3"))))))
 
 (defn store
-  "Write serialized content to the specified location in s3"
-  [location content]
-  (let [escaped-location (clojure.string/replace location "/" "_")
-        tmp-path (str "/tmp/" escaped-location)
+  "Write serialized content to the specified location in s3.
+   Conf arg is a storm Config instance."
+  [conf location content]
+  (let [bucket (get conf "S3_BUCKET")
+        creds {:access-key (get conf "AWS_ACCESS_KEY_ID")
+               :secret-key (get conf "AWS_SECRET_ACCESS_KEY")
+               :endpoint   (get conf "AWS_S3_REGION")}
+        escaped-location (clojure.string/replace location "/" "_")
+        tmp-file (java.io.File/createTempFile "archive_" escaped-location)
+        tmp-path (.getAbsolutePath tmp-file)
         _ (spit tmp-path content)
         file (clojure.java.io/file tmp-path)
-        result (safe-put creds bucket-name location file)]
+        result (safe-put creds bucket location file)]
     (clojure.java.io/delete-file tmp-path)
     result))
