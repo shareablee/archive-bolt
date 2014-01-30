@@ -14,5 +14,5 @@
    Config instance."
   [conf backend location content]
   (let [handler (get handlers backend)]
-    (handler location content)))
+    (handler conf location content)))
 

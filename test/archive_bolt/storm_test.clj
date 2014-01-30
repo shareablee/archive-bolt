@@ -1,6 +1,5 @@
 (ns archive-bolt.storm-test
   (:use clojure.test
-        [archive-bolt.backends.s3 :only [bucket-name creds]]
         [backtype.storm clojure config testing]
         [amazonica.aws.s3 :only [get-object delete-object]]
         [archive-bolt.storm :only [archive]]
@@ -30,10 +29,13 @@
           ;; This becomes the input to the archive bolt
           mock-sources {"1" [["s3" key content]]}
           topo (mk-test-topology)
+          bucket-name "dev.shareablee.com"
           conf {"AWS_ACCESS_KEY_ID" "AKIAIPOBJD5JETWYK7TA"
                 "AWS_SECRET_ACCESS_KEY" "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"
                 "AWS_S3_REGION" "us-east-1"
                 "S3_BUCKET" "dev.shareablee.com"}
+          creds {:access-key "AKIAIPOBJD5JETWYK7TA"
+                 :secret-key "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"} 
           results (complete-topology cluster
                                      topo
                                      :storm-conf conf
