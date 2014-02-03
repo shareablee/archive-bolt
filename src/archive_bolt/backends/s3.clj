@@ -31,8 +31,6 @@
         creds {:access-key (get conf "AWS_ACCESS_KEY_ID")
                :secret-key (get conf "AWS_SECRET_ACCESS_KEY")
                :endpoint   (get conf "AWS_S3_REGION")}
-        _ (log-message (format "storing to %s archive using conf: %s"
-                               bucket creds))
         escaped-location (clojure.string/replace location "/" "_")
         tmp-file (java.io.File/createTempFile "archive_" escaped-location)
         tmp-path (.getAbsolutePath tmp-file)
