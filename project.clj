@@ -3,7 +3,6 @@
   :url "http://www.shareablee.com"
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [clj-time "0.4.4"]
-                 [com.taoensso/timbre "1.5.3"]
                  [org.clojure/tools.nrepl "0.2.2"]
                  [cronj "0.6.1"]
                  [cheshire "5.2.0"]

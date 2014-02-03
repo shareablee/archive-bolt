@@ -1,8 +1,7 @@
 (ns archive-bolt.storm
-  (:use [backtype.storm clojure config]
+  (:use [backtype.storm clojure config log]
         [archive-bolt.router :only [process-request]]
-        [archive-bolt.fields :only [archive-output-fields]]
-        [taoensso.timbre :as timbre :only [debug error]]) 
+        [archive-bolt.fields :only [archive-output-fields]]) 
   (:gen-class))
 
 
@@ -20,5 +19,5 @@
       (if result
         (do (emit-bolt! collector [result] :anchor tuple)
             (ack! collector tuple))
-        (do (error "No result returned from backend")
+        (do (log-warn "No result returned from backend")
             (fail! collector tuple)))))))

@@ -1,6 +1,6 @@
 (ns archive-bolt.backends.s3
   (:use [amazonica.aws.s3 :only [put-object]]
-        [taoensso.timbre :as timbre :only (info warn error fatal)]
+        backtype.storm.log
         amazonica.aws.s3transfer))
 
 
@@ -13,13 +13,13 @@
   (try (do (put-object creds :bucket-name bucket :key location :file file)
            (str "s3://" bucket "/" location)) 
        (catch Exception e (do (Thread/sleep wait-time)
-                              (info "safe-put retry attempt" retry-count)
+                              (log-message "safe-put retry attempt" retry-count)
                               (if (< retry-count max-retries)
                                 (safe-put creds bucket location file
                                           :retry-count (inc retry-count)
                                           :max-retries max-retries
                                           :wait-time wait-time)
-                                (error "safe-put failed to store to s3"))))))
+                                (log-warn "safe-put failed to store to s3"))))))
 
 (defn store
   "Write serialized content to the specified location in s3.
