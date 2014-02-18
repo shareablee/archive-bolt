@@ -15,7 +15,7 @@
            (str "s3://" bucket "/" location)) 
        (catch Exception e (do (Thread/sleep wait-time)
                               (log-error e)
-                              (log-message "safe-put retry attempt" retry-count)
+                              (log-message "safe-put retry attempt " retry-count)
                               (if (< retry-count max-retries)
                                 (safe-put creds bucket location file
                                           :retry-count (inc retry-count)
