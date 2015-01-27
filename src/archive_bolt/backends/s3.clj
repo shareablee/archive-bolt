@@ -21,15 +21,17 @@
   ;; Store the content and return the location
   (try (do (s3/put-object creds :bucket-name bucket :key location :file file)
            (str "s3://" bucket "/" location)) 
-       (catch Exception e (do (Thread/sleep wait-time)
-                              (storm/log-error e)
-                              (storm/log-message "safe-put retry attempt " retry-count)
-                              (if (< retry-count max-retries)
-                                (safe-put creds bucket location file
-                                          :retry-count (inc retry-count)
-                                          :max-retries max-retries
-                                          :wait-time wait-time)
-                                (storm/log-warn "safe-put failed to store to s3"))))))
+       (catch Exception e
+         (do (Thread/sleep wait-time)
+             (storm/log-error e " Failed to store in s3. "
+                              "Retry count: " retry-count)
+             (if (< retry-count max-retries)
+               (safe-put creds bucket location file
+                         :retry-count (inc retry-count)
+                         :max-retries max-retries
+                         :wait-time wait-time)
+               (storm/log-warn "safe-put failed to store to s3 after "
+                               max-retries " attempts for " bucket location))))))
 
 (defn store-content
   [conf location content]
