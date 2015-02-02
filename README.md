@@ -31,7 +31,7 @@ Emits a bolt of `["meta" "result"]`.
 
 ### `archive-read`
 
-Takes a tuple of `["meta", "backend", "location"]` where backend is a string of the backend the content is stored in and location is the path the file should be saved to.
+Takes a tuple of `["meta", "backend", "location"]` where backend is a string of the backend the content is stored in and location is the path the file should be read from.
 
 For s3, if there are more than 1,000 results, it will automatically paginate to yield all results. 
 
