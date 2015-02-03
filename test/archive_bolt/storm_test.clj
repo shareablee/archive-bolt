@@ -89,6 +89,31 @@
          (is (ms= [[{} expected]]
                   (read-tuples results "2")))))))
 
+(deftest test-archive-read-bolt-list-objects-opts
+  (with-s3-key
+    #(with-simulated-time-local-cluster [cluster]
+       (let [test-conf (get-test-conf)
+             ;; This becomes the input to the archive bolt
+             mock-meta {:archive-bolt.read.s3/list-objects-opts
+                        {:delimiter "/"}}
+             mock-sources {"1" [[mock-meta "s3" test-location]]}
+             topo (mk-test-read-topology)
+             bucket-name "dev.shareablee.com"
+             results (complete-topology cluster
+                                        topo
+                                        :storm-conf test-conf
+                                        :mock-sources mock-sources)
+             expected [{:meta {:location test-location
+                               :full-path test-key
+                               :file-name test-file-name}
+                        :value test-content}]]
+         ;; Check the output of the bolt matches expected tuple output      
+         ;; Order is not guaranteed so we are using the built in storm
+         ;; equality function ms= rather than =
+         (is (ms= [[{:archive-bolt.read.s3/list-objects-opts {:delimiter "/"}}
+                    expected]]
+                  (read-tuples results "2")))))))
+
 (deftest test-archive-read-filtered-bolt
   (with-s3-key
     #(with-simulated-time-local-cluster [cluster]

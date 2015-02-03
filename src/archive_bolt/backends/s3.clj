@@ -75,17 +75,18 @@
    them up. If the results are paginated, recur until all results are returned.
    Results are paginated by 1,000 keys as per the S3 API docs. Results keys are 
    filtered by filter-fn. Returns a collection of results."
-  [conf location & [filter-fn accum marker]]
+  [conf location & [filter-fn list-objects-opts accum marker]]
   (let [creds (mk-credentials conf)
         ;; For backwards compatibility look for the old key as fallback
         bucket-name (or (get conf "ARCHIVE_READ_S3_BUCKET")
                         (get conf "S3_BUCKET")
                         (throw (Exception. "Missing config field ARCHIVE_READ_S3_BUCKET")))
         ;; Search s3 for all keys at the location
-        search-results (s3/list-objects creds
-                                        :bucket-name bucket-name
-                                        :prefix location
-                                        :marker marker)
+        opts (merge list-objects-opts
+                    {:bucket-name bucket-name
+                     :prefix location
+                     :marker marker})
+        search-results (s3/list-objects creds opts)
         ;; Grab the keys and optionally filter them
         keys ((or filter-fn identity) (get-keys-from-results search-results))
         values (pmap #(lookup-key creds bucket-name location %) keys)
@@ -94,5 +95,5 @@
     (if-let [next-marker (:next-marker search-results)] 
       ;; NOTE optional args must be in a vector when using recur
       (do (storm/log-message "Paging archive results at " location)
-          (recur conf location [filter-fn result next-marker]))
+          (recur conf location [filter-fn list-objects-opts result next-marker]))
       result)))

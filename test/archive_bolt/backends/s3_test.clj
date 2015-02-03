@@ -58,6 +58,19 @@
                     :file-name test-file-name}
               :value test-content}]))))
 
+(deftest test-filter-from-backend-with-list-objects-opts
+  (with-redefs [s3/list-objects (fn [& args]
+                                  (is (contains? (second args) :delimiter))
+                                  {:object-summaries [{:key "foo"}]
+                                   :next-marker nil})
+                s3-backend/lookup-key (fn [_ _ _ k] {k k})]
+    (is (= (backend/filter-from-backend :s3
+                                        (get-test-conf)
+                                        test-location
+                                        nil
+                                        {:delimiter "/"})
+           [{"foo" "foo"}]))))
+
 (deftest test-filter-from-backend-no-results)
   #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
           []))
@@ -74,10 +87,13 @@
            [{"foo" "foo"}]))))
 
 (defn mock-list-objects
-  [_ & {:keys [bucket-name prefix marker]}]
-  (if (= marker 123)
-    {:object-summaries [{:key "foo"}] :next-marker nil}
-    {:object-summaries [{:key "bar"}] :next-marker 123}))
+  [_ & opts]
+  (let [{:keys [bucket-name prefix marker]} (if (map? (first opts))
+                                              (first opts)
+                                              (apply hash-map opts))]
+    (if (= marker 123)
+      {:object-summaries [{:key "foo"}] :next-marker nil}
+      {:object-summaries [{:key "bar"}] :next-marker 123})))
 
 (deftest test-filter-from-backend-pagination
   "Test paging through results of searching s3 without actually hitting s3"
