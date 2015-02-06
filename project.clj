@@ -1,4 +1,4 @@
-(defproject archive-bolt "0.1.6"
+(defproject com.shareablee/archive-bolt "0.1.6"
   :description "Reusable storm bolt for storing data to S3"
   :url "https://github.com/shareablee/archive-bolt"
   :license {:name "Eclipse Public License"
