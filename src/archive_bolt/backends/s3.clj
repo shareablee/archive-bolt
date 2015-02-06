@@ -90,7 +90,11 @@
                                         :marker marker)
         ;; Grab the keys and optionally filter them
         keys ((or filter-fn identity) (get-keys-from-results search-results))
-        values (pmap #(lookup-key creds bucket-name location %) keys)
+        lookup-parallelism 20
+        values (mapcat (fn [ks]
+                         (pmap #(lookup-key creds bucket-name location %) ks))
+                       (partition-all lookup-parallelism keys))
+        ;values (pmap #(lookup-key creds bucket-name location %) keys)
         result (concat accum values)]
     ;; If there is a next marker then we should recur
     (if-let [next-marker (:next-marker search-results)] 
