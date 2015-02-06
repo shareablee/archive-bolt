@@ -4,8 +4,6 @@ Reusable Storm bolt for archiving data to file. Currently supports storing to s3
 
 [![Build Status](https://magnum.travis-ci.com/shareablee/archive-bolt.svg?token=NU2eMZobEmxbYse4grEj&branch=master)](https://magnum.travis-ci.com/shareablee/archive-bolt)
 
-Current production version: [0.1.5] Current dev version: [0.1.6-SNAPSHOT]
-
 ## Change log
 
 - v0.1.6
