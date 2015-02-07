@@ -106,25 +106,25 @@
                      (take parallelism s3-keys))
          queued (drop parallelism s3-keys)]
     (Thread/sleep 100)
-    (let [completed (->> active (filter realized?) (map deref))
-          accum (concat accum (remove nil? completed))
+    (let [[done in-progress] ((juxt #(get % true) #(get % false))
+                               (group-by realized? active))
+          accum (concat accum (remove nil? (map deref done)))
           new-requests (map #(future (lookup-key creds bucket-name location %))
-                            (take (count completed) queued))
-          active (->> active (remove realized?) (concat new-requests))
-          queued (drop (count completed) queued)]
+                            (take (count done) queued))
+          active (concat in-progress new-requests)
+          queued (drop (count done) queued)]
       (if (seq active)
         (recur accum active queued)
         accum))))
 
 (defn parallel-lookup
   [s3-keys parallelism creds bucket-name location]
-  (storm/log-message "Looking up " (count s3-keys) " keys "
+  (storm/log-message "Looking up " (count s3-keys) " keys, "
                      parallelism " at a time.")
   (let [[values elapsed-ms]
         (capture-time
           (parallel-lookup* s3-keys parallelism creds bucket-name location))]
-    (storm/log-message "Lookup took " elapsed-ms "ms")
-    ;(storm/log-message "Values:  " (with-out-str (clojure.pprint/pprint values)))
+    (storm/log-message "Looked up " (count s3-keys) " keys in " elapsed-ms "ms")
     values))
 
 (defn filter-from-backend

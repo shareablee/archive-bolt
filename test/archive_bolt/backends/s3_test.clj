@@ -1,5 +1,6 @@
 (ns archive-bolt.backends.s3-test
-  (:require [clojure.test :refer :all]
+  (:require [backtype.storm.log :as storm]
+            [clojure.test :refer :all]
             [cheshire.core :as json]
             [amazonica.aws.s3 :as s3]
             [archive-bolt.backends.core :as backend]
@@ -41,6 +42,17 @@
     (f)
     (s3/delete-object test-creds test-bucket-name test-key)))
 
+(defn with-s3-keys [num-keys f]
+  (let [test-conf (get-test-conf)
+        test-creds (mk-test-creds)
+        test-bucket-name (get test-conf "S3_BUCKET")]
+    [f]
+    (doseq [n (range num-keys)]
+      (backend/store :s3 test-conf (str test-key n) test-content-str))
+    (f)
+    (doseq [n (range num-keys)]
+      (s3/delete-object test-creds test-bucket-name (str test-key n)))))
+
 (deftest test-store
   (let [test-conf (get-test-conf)
         test-bucket-name (get test-conf "S3_BUCKET")
@@ -57,6 +69,13 @@
                     :full-path test-key
                     :file-name test-file-name}
               :value test-content}]))))
+
+(deftest test-filter-from-backend-multiple-keys
+  (doseq [num-keys [1 10 49 50 51 75 300]]
+    (storm/log-message "Testing with " num-keys " keys")
+    (with-s3-keys num-keys
+      #(let [r (backend/filter-from-backend :s3 (get-test-conf) test-location)]
+        (is (= (count r) num-keys))))))
 
 (deftest test-filter-from-backend-no-results)
   #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
