@@ -8,10 +8,12 @@
 
 
 (def test-location "testing/location/")
+(def test-location-multi "testing/location_nulti/")
 
 (def test-file-name "test.json")
 
 (def test-key (str test-location test-file-name))
+(def test-key-multi (str test-location-multi test-file-name))
 
 (defn get-test-conf []
   (let [required ["AWS_ACCESS_KEY_ID"
@@ -48,10 +50,11 @@
         test-bucket-name (get test-conf "S3_BUCKET")]
     [f]
     (doseq [n (range num-keys)]
-      (backend/store :s3 test-conf (str test-key n) test-content-str))
+      (backend/store :s3 test-conf (str test-key-multi n) test-content-str))
     (f)
+    (storm/log-message "Deleting " num-keys " test keys...")
     (doseq [n (range num-keys)]
-      (s3/delete-object test-creds test-bucket-name (str test-key n)))))
+      (s3/delete-object test-creds test-bucket-name (str test-key-multi n)))))
 
 (deftest test-store
   (let [test-conf (get-test-conf)
@@ -71,10 +74,11 @@
               :value test-content}]))))
 
 (deftest test-filter-from-backend-multiple-keys
-  (doseq [num-keys [1 10 49 50 51 75 300]]
+  (doseq [num-keys [1 10 49 50 51 75]]
     (storm/log-message "Testing with " num-keys " keys")
     (with-s3-keys num-keys
-      #(let [r (backend/filter-from-backend :s3 (get-test-conf) test-location)]
+      #(let [r (backend/filter-from-backend :s3 (get-test-conf)
+                                            test-location-multi)]
         (is (= (count r) num-keys))))))
 
 (deftest test-filter-from-backend-no-results)

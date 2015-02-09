@@ -1,10 +1,9 @@
 (ns archive-bolt.backends.s3
   (:require [backtype.storm.log :as storm] 
             [amazonica.aws.s3 :as s3]
-            [archive-bolt.utils :refer [get-or-throw]]
+            [archive-bolt.utils :refer [get-or-throw capture-time]]
             [cheshire.core :as json]
             [clojure.string :as st]))
-
 
 (defn mk-credentials
   [conf]
@@ -72,55 +71,38 @@
                   (format "Failed to get bucket: %s, key: %s, error: %s "
                           bucket-name key e))))})
 
-(defn capture-time-fn
-  "Returns a tuple of how much time it took (in ms) for the thunk to
-  execute, and the return value of the function."
-  [f]
-  (let [start (System/currentTimeMillis)]
-    [(f) (/ (double (- (System/currentTimeMillis) start)) 1000.0)]))
-
-(defmacro capture-time
-  "Returns a tuple of how much time it took (in ms) the code to
-  execute and the value of the last expression."
-  [& body]
-  `(capture-time-fn (fn [] ~@body)))
-
-#_(defn parallel-lookup
-  [s3-keys parallelism creds bucket-name location]
-  (storm/log-message "Looking up " (count s3-keys) " keys.")
-  (let [[values elapsed-ms]
-        (capture-time
-          (mapcat (fn [ks]
-                    ;; this should really be a buffer that launches new conns as
-                    ;; some results complete
-                    (pmap #(lookup-key creds bucket-name location %) ks))
-                  (partition-all parallelism s3-keys)))]
-    (storm/log-message "Lookup took " elapsed-ms "ms")
-    values))
-
 (defn parallel-lookup*
-  "Looks up keys with specified parallelism."
   [s3-keys parallelism creds bucket-name location]
-  (loop [accum []
+  (loop [accum [] ;; results accumulate here
+         ;; Launch initial reads
          active (map #(future (lookup-key creds bucket-name location %))
                      (take parallelism s3-keys))
+         ;; Save the remainder for when some responses come back
          queued (drop parallelism s3-keys)]
+    ;; Wait a bit for some responses to come in
     (Thread/sleep 100)
+    ;; Get completed lookups and those that are still in progress
     (let [[done in-progress] ((juxt #(get % true) #(get % false))
                                (group-by realized? active))
-          accum (concat accum (remove nil? (map deref done)))
+          ;; Store the completed lookups
+          accum (concat accum (->> (map deref done)
+                                   (remove nil?)))
+          ;; Launch a new request for every completed lookup
           new-requests (map #(future (lookup-key creds bucket-name location %))
                             (take (count done) queued))
+          ;; Update active request list
           active (concat in-progress new-requests)
+          ;; Update qued key list
           queued (drop (count done) queued)]
+      ;; Return when all lookups have been completed
       (if (seq active)
         (recur accum active queued)
         accum))))
 
 (defn parallel-lookup
+  "Looks up s3-keys with specified parallelism."
   [s3-keys parallelism creds bucket-name location]
-  (storm/log-message "Looking up " (count s3-keys) " keys, "
-                     parallelism " at a time.")
+  (storm/log-message "Looking up " (count s3-keys) " keys.")
   (let [[values elapsed-ms]
         (capture-time
           (parallel-lookup* s3-keys parallelism creds bucket-name location))]
@@ -128,10 +110,6 @@
     values))
 
 (defn filter-from-backend
-  "Search s3 for keys at the given location. Take the list of keys and look
-   them up. If the results are paginated, recur until all results are returned.
-   Results are paginated by 1,000 keys as per the S3 API docs. Results keys are 
-   filtered by filter-fn. Returns a collection of results."
   [conf location & [filter-fn accum marker]]
   (let [creds (mk-credentials conf)
         ;; For backwards compatibility look for the old key as fallback
@@ -143,13 +121,16 @@
                                         :bucket-name bucket-name
                                         :prefix location
                                         :marker marker)
-        ;; Grab the keys and optionally filter them
-        s3-keys ((or filter-fn identity) (get-keys-from-results search-results))
-        values (parallel-lookup s3-keys 50 creds bucket-name location)
-        result (concat accum values)]
+        ;; Grab the keys and concat with accumulated keys so far
+        s3-keys (concat accum (get-keys-from-results search-results))]
     ;; If there is a next marker then we should recur
-    (if-let [next-marker (:next-marker search-results)] 
-      ;; NOTE optional args must be in a vector when using recur
-      (do (storm/log-message "Paging archive results at " location)
-          (recur conf location [filter-fn result next-marker]))
-      result)))
+    (if-let [next-marker (:next-marker search-results)]
+      (do ;; NOTE optional args must be in a vector when using recur
+        (storm/log-message "Paging archive results at " location)
+        (recur conf location [filter-fn s3-keys next-marker]))
+      ;; Once all keys have been gathered filter them  and lookup up in parallel
+      (let [parallelism 50]
+        ;; TODO: parallelism should eventually be exposed in defbolt
+        ;; Lookup keys, parallelism at time
+        (parallel-lookup ((or filter-fn identity) s3-keys)
+                         parallelism creds bucket-name location)))))
