@@ -110,6 +110,11 @@
     values))
 
 (defn filter-from-backend
+  "Search s3 for keys at the given location. Take the list of keys and look
+   them up. If the results are paginated, recur until all results are returned.
+   Results are paginated by 1,000 keys as per the S3 API docs. Once all keys
+   are gathered, they are filtered by filter-fn and looked up in parallel.
+   Returns a collection of results."
   [conf location & [filter-fn accum marker]]
   (let [creds (mk-credentials conf)
         ;; For backwards compatibility look for the old key as fallback
