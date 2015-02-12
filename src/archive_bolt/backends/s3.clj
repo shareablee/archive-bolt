@@ -137,5 +137,5 @@
       (let [parallelism 50]
         ;; TODO: parallelism should eventually be exposed in defbolt
         ;; Lookup keys, parallelism at time
-        (parallel-lookup ((or filter-fn identity) s3-keys)
-                         parallelism creds bucket-name location)))))
+        (when-let [s3-keys (seq ((or filter-fn identity) s3-keys))]
+          (parallel-lookup s3-keys parallelism creds bucket-name location))))))
