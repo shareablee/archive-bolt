@@ -12,6 +12,14 @@
    :secret-key (get-or-throw conf "AWS_SECRET_ACCESS_KEY")
    :endpoint   (get-or-throw conf "AWS_S3_REGION")})
 
+(defn put-object
+  [creds bucket location content]
+  (let [in-bytes (.getBytes content "UTF-8")
+        input (io/input-stream in-bytes)]
+    (s3/put-object creds {:bucket-name bucket :key location :input-stream input
+                          :metadata {:content-length (count in-bytes)}})
+    (str "s3://" bucket "/" location)))
+
 (defn safe-put
   "Attempt to PUT the file to s3 returns full s3 path when successful or 
    nil if unsuccessful. Retries on failure up to max-retries times."
@@ -19,21 +27,19 @@
    & {:keys [retry-count max-retries wait-time]
       :or {retry-count 0, max-retries 10 wait-time 1000}}]
   ;; Store the content and return the location
-  (try (let [input (io/input-stream (.getBytes content))]
-         (s3/put-object creds {:bucket-name bucket :key location :input-stream input
-                               :metadata {:content-length (.length content)}})
-         (str "s3://" bucket "/" location)) 
-       (catch Exception e
-         (do (Thread/sleep wait-time)
-             (storm/log-error e " Failed to store in s3. "
-                              "Retry count: " retry-count)
-             (if (< retry-count max-retries)
-               (safe-put creds bucket location content
-                         :retry-count (inc retry-count)
-                         :max-retries max-retries
-                         :wait-time wait-time)
-               (storm/log-warn "safe-put failed to store to s3 after "
-                               max-retries " attempts for " bucket location))))))
+  (try
+    (put-object creds bucket location content) 
+    (catch Exception e
+      (do (Thread/sleep wait-time)
+          (storm/log-error e " Failed to store in s3. "
+                           "Retry count: " retry-count)
+          (if (< retry-count max-retries)
+            (safe-put creds bucket location content
+                      :retry-count (inc retry-count)
+                      :max-retries max-retries
+                      :wait-time wait-time)
+            (storm/log-warn "safe-put failed to store to s3 after "
+                            max-retries " attempts for " bucket location))))))
 
 (defn store-content
   [conf location content]
