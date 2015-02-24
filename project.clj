@@ -9,4 +9,18 @@
                  [amazonica "0.2.3"]
                  [org.apache.httpcomponents/httpclient "4.2.5"]]
   :profiles {:dev {:dependencies [[storm "0.9.0.1"]
-                                  [org.clojure/tools.nrepl "0.2.2"]]}})
+                                  [org.clojure/tools.nrepl "0.2.2"]]}}
+  :plugins
+  [[lein-modules "0.3.9"]
+   [s3-wagon-private "1.1.2"]]
+  :repositories
+  [["releases"
+    {:url "s3p://shareablee-jar-repo/releases"
+     :username :env/shareablee_aws_access_key
+     :passphrase :env/shareablee_aws_secret_access_key
+     :sign-releases false
+     :snapshots false}]
+   ["snapshots"
+    {:url "s3p://shareablee-jar-repo/snapshots"
+     :username :env/shareablee_aws_access_key
+     :passphrase :env/shareablee_aws_secret_access_key}]])
