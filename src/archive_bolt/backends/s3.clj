@@ -92,12 +92,14 @@
                                         :prefix location
                                         :marker marker)
         ;; Grab the keys and optionally filter them
-        keys ((or filter-fn identity) (get-keys-from-results search-results))
+        keys (take 1 (get-keys-from-results search-results))
         values (pmap #(lookup-key creds bucket-name location %) keys)
         result (concat accum values)]
+    result
     ;; If there is a next marker then we should recur
-    (if-let [next-marker (:next-marker search-results)] 
-      ;; NOTE optional args must be in a vector when using recur
-      (do (storm/log-message "Paging archive results at " location)
-          (recur conf location [filter-fn result next-marker]))
-      result)))
+    ;; (if-let [next-marker (:next-marker search-results)] 
+    ;;   ;; NOTE optional args must be in a vector when using recur
+    ;;   (do (storm/log-message "Paging archive results at " location)
+    ;;       (recur conf location [filter-fn result next-marker]))
+    ;;   result)
+    ))
