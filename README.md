@@ -6,6 +6,8 @@ Reusable Storm bolt for archiving data to file. Currently supports storing to s3
 
 ## Change log
 
+- v0.1.7
+  - Bumped storm version to 0.9.3.
 - v0.1.6
   - `archive` bolt now takes a `"meta"` field to the input tuple which will be passed through to the output tuple
   - Tests now require environment variables. See the "Running Tests" section.
