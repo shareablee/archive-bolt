@@ -6,6 +6,8 @@ Reusable Storm bolt for archiving data to file. Currently supports storing to s3
 
 ## Change log
 
+- v0.1.8
+  - Writing objects to S3 no longer uses a temporary file.
 - v0.1.7
   - Bumped storm version to 0.9.3.
 - v0.1.6
