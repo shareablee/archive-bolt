@@ -5,9 +5,9 @@
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :aot :all
   :dependencies [[org.clojure/clojure "1.5.1"]
+                 [org.apache.storm/storm-core "0.9.3"]
                  [clj-time "0.4.4"]                 
                  [cheshire "5.2.0"]
                  [amazonica "0.2.3"]
                  [org.apache.httpcomponents/httpclient "4.2.5"]]
-  :profiles {:dev {:dependencies [[org.apache.storm/storm-core "0.9.3"]
-                                  [org.clojure/tools.nrepl "0.2.2"]]}})
+  :profiles {:dev {:dependencies [[org.clojure/tools.nrepl "0.2.2"]]}})
