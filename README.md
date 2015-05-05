@@ -13,6 +13,7 @@ Reusable Storm bolt for archiving data to file. Currently supports storing to s3
 - v0.1.6
   - `archive` bolt now takes a `"meta"` field to the input tuple which will be passed through to the output tuple
   - Tests now require environment variables. See the "Running Tests" section.
+  - The S3 backend for archive-read now accepts extra options when calling list-objects.
 - v0.1.5
   - Added `archive-read-filtered` bolt which must be initialized with a predicate function for filtering search results. The predicate function must be quoted with a backtick.
   - Use `log-debug` instead of `log-warn` if no results are found during archive read
@@ -36,6 +37,8 @@ Emits a bolt of `["meta" "result"]`.
 Takes a tuple of `["meta", "backend", "location"]` where backend is a string of the backend the content is stored in and location is the path the file should be read from.
 
 For s3, if there are more than 1,000 results, it will automatically paginate to yield all results. 
+
+The implementation of the S3 backend calls list-objects. By passing a map into the `meta` field of the tuple with the key `:archive-bolt.read.s3/list-objects-opts`, you can override the options except for `:bucket` and `:prefix`. A common option to set is `:delimiter`.
 
 #### Behavior
 
