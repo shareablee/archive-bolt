@@ -6,6 +6,8 @@ Reusable Storm bolt for archiving data to file. Currently supports storing to s3
 
 ## Change log
 
+- v0.1.10
+  - Set content type as `application/json` when writing files to S3.
 - v0.1.8
   - Writing objects to S3 no longer uses a temporary file.
 - v0.1.7
