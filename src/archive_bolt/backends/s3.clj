@@ -18,7 +18,8 @@
   (let [in-bytes (.getBytes content "UTF-8")
         input (io/input-stream in-bytes)]
     (s3/put-object creds {:bucket-name bucket :key location :input-stream input
-                          :metadata {:content-length (count in-bytes)}})
+                          :metadata {:content-length (count in-bytes)
+                                     :content-type "application/json"}})
     (str "s3://" bucket "/" location)))
 
 (defn safe-put
