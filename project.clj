@@ -8,10 +8,12 @@
                  [cheshire "5.2.0"]
                  [clj-time "0.4.4"]]
   :profiles
-  {:dev
+  {:provided
    {:dependencies [[org.apache.storm/storm-core "0.9.3"]
-                   [org.clojure/clojure "1.5.1"]
-                   [org.clojure/tools.nrepl "0.2.2"]]}}
+                   [org.clojure/clojure "1.5.1"]]}
+   :dev
+   {:dependencies [[org.clojure/tools.nrepl "0.2.2"]]}}
+  :plugins [[s3-wagon-private "1.1.2"]]
   :repositories
   [["releases"
     {:url "s3p://shareablee-jar-repo/releases"
