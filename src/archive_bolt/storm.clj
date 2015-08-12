@@ -46,7 +46,7 @@
       [tuple]
       (-archive-read conf collector tuple))))
 
-;; TEMP HACK for youtube
+;; TEMP HACK for youtube replay
 (defn key->object-id
   [k]
   (let [file-name (last (clojure.string/split k #"\/"))
