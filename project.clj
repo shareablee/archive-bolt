@@ -17,7 +17,8 @@
     {:url "s3p://shareablee-jar-repo/releases"
      :username :env/shareablee_aws_access_key
      :passphrase :env/shareablee_aws_secret_access_key
-     :sign-releases false}]
+     :sign-releases false
+     :snapshots false}]
    ["snapshots"
     {:url "s3p://shareablee-jar-repo/snapshots"
      :username :env/shareablee_aws_access_key
