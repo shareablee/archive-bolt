@@ -52,11 +52,11 @@
 
 (deftest test-filter-from-backend
   (with-s3-key
-    #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
-            [{:meta {:location test-location
-                    :full-path test-key
-                    :file-name test-file-name}
-              :value test-content}]))))
+    #(is (= [{:meta {:location test-location
+                     :full-path test-key
+                     :file-name test-file-name}
+              :value test-content}]
+            (backend/filter-from-backend :s3 (get-test-conf) test-location)))))
 
 (deftest test-filter-from-backend-no-results)
   #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
@@ -67,21 +67,23 @@
                                   {:object-summaries [{:key "foo"} {:key "foo"}]
                                    :next-marker nil})
                 s3-backend/lookup-key (fn [_ _ _ k] {k k})]
-    (is (= (backend/filter-from-backend :s3
+    (is (= [{"foo" "foo"}]
+           (backend/filter-from-backend :s3
                                         (get-test-conf)
                                         test-location
-                                        (fn [coll] (set coll)))
-           [{"foo" "foo"}]))))
+                                        {:filter-fn (fn [coll] (set coll))})))))
 
 (defn mock-list-objects
   [_ & {:keys [bucket-name prefix marker]}]
-  (if (= marker 123)
-    {:object-summaries [{:key "foo"}] :next-marker nil}
-    {:object-summaries [{:key "bar"}] :next-marker 123}))
+  (if-not marker
+    {:object-summaries [{:key "foo"}] :next-marker 123}
+    (condp = marker
+      123 {:object-summaries [{:key "bar"}] :next-marker 456}
+      456 {:object-summaries [{:key "baz"}] :next-marker nil})))
 
 (deftest test-filter-from-backend-pagination
   "Test paging through results of searching s3 without actually hitting s3"
   (with-redefs [s3/list-objects mock-list-objects
-                s3-backend/lookup-key (fn [_ _ _ k] {k k})]
-    (is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
-           [{"bar" "bar"} {"foo" "foo"}]))))
+                s3-backend/lookup-key (fn [_ _ _ k] k)]
+    (is (= ["foo" "bar" "baz"]
+           (backend/filter-from-backend :s3 (get-test-conf) test-location)))))
