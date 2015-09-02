@@ -87,7 +87,8 @@
   ([conf location]
    (filter-from-backend conf location nil {}))
   ([conf location {:keys [filter-fn marker] :as opts}]
-   (let [creds (mk-credentials conf)
+   (lazy-seq
+    (let [creds (mk-credentials conf)
          ;; For backwards compatibility look for the old key as fallback
          bucket-name (or (get conf "ARCHIVE_READ_S3_BUCKET")
                          (get conf "S3_BUCKET")
@@ -104,6 +105,6 @@
      (if-let [next-marker (:next-marker search-results)]
        (do (storm/log-message "Paging archive results at " location)
            (concat values
-                   (lazy-seq (filter-from-backend conf location {:filter-fn filter-fn
-                                                                 :marker next-marker}))))
-       values))))
+                   (filter-from-backend conf location {:filter-fn filter-fn
+                                                       :marker next-marker})))
+       values)))))
