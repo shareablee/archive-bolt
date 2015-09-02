@@ -56,8 +56,7 @@
                      :full-path test-key
                      :file-name test-file-name}
               :value test-content}]
-            (take-while (comp not nil?)
-                        (backend/filter-from-backend :s3 (get-test-conf) test-location))))))
+            (backend/filter-from-backend :s3 (get-test-conf) test-location)))))
 
 (deftest test-filter-from-backend-no-results)
   #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
@@ -68,12 +67,11 @@
                                   {:object-summaries [{:key "foo"} {:key "foo"}]
                                    :next-marker nil})
                 s3-backend/lookup-key (fn [_ _ _ k] {k k})]
-    (is (= (take-while (comp not nil?)
-                       (backend/filter-from-backend :s3
-                                                    (get-test-conf)
-                                                    test-location
-                                                    (fn [coll] (set coll))))
-           [{"foo" "foo"}]))))
+    (is (= [{"foo" "foo"}]
+           (backend/filter-from-backend :s3
+                                        (get-test-conf)
+                                        test-location
+                                        (fn [coll] (set coll)))))))
 
 (defn mock-list-objects
   [_ & {:keys [bucket-name prefix marker]}]
@@ -88,5 +86,4 @@
   (with-redefs [s3/list-objects mock-list-objects
                 s3-backend/lookup-key (fn [_ _ _ k] k)]
     (is (= ["foo" "bar" "baz"]
-           (take-while (comp not nil?)
-                       (backend/filter-from-backend :s3 (get-test-conf) test-location))))))
+           (backend/filter-from-backend :s3 (get-test-conf) test-location)))))

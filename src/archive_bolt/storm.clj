@@ -32,8 +32,7 @@
   [conf collector tuple & [filter-fn]]
   (let [{:keys [meta backend location]} tuple
         filter-fn (or filter-fn identity)
-        results (take-while (comp not nil?)
-                            (filter-from-backend backend conf location {:filter-fn filter-fn}))]
+        results (filter-from-backend backend conf location {:filter-fn filter-fn})]
     (if (seq results)
       (emit-bolt! collector [meta results] :anchor tuple)
       (log-debug (format "No results returned from %s backend at %s"
@@ -61,6 +60,6 @@
     [tuple]
     (let [{:keys [meta backend location]} tuple
           results (filter-from-backend backend conf location)]
-      (doseq [r (partition-all chunk-n (take-while (comp not nil?) results))]
+      (doseq [r (partition-all chunk-n results)]
         (emit-bolt! collector [meta results] :anchor tuple))
       (ack! collector tuple)))))
