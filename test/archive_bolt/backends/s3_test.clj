@@ -71,7 +71,7 @@
            (backend/filter-from-backend :s3
                                         (get-test-conf)
                                         test-location
-                                        (fn [coll] (set coll)))))))
+                                        {:filter-fn (fn [coll] (set coll))})))))
 
 (defn mock-list-objects
   [_ & {:keys [bucket-name prefix marker]}]

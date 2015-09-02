@@ -29,5 +29,5 @@
   (throw (Exception. (str "Backend not found for " backend))))
 
 (defmethod filter-from-backend :s3
-  [_ conf location & [pred-fn]]
-  (s3/filter-from-backend conf location {:filter-fn pred-fn}))
+  [_ conf location & [opts]]
+  (s3/filter-from-backend conf location opts))

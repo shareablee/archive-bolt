@@ -76,35 +76,35 @@
                   (format "Failed to get bucket: %s, key: %s, error: %s "
                           bucket-name key e))))})
 
-;; TODO add an option to set the pagination value and lazy concat
-;; results together should give enough control to avoid out of memory issues
-
 (defn filter-from-backend
   "Search s3 for keys at the given location. Take the list of keys and look
    them up. If the results are paginated, recur until all results are returned.
-   Results are paginated by 1,000 keys as per the S3 API docs. Results keys are
-  filtered by filter-fn. Returns a lazy seq of results."
+   Results are paginated by ARCHIVE_READ_S3_MAX_KEYS keys as per the S3
+   API docs. Results keys are filtered by filter-fn. Returns a lazy seq of results."
   ([conf location]
    (filter-from-backend conf location nil {}))
   ([conf location {:keys [filter-fn marker] :as opts}]
    (lazy-seq
     (let [creds (mk-credentials conf)
-         ;; For backwards compatibility look for the old key as fallback
-         bucket-name (or (get conf "ARCHIVE_READ_S3_BUCKET")
-                         (get conf "S3_BUCKET")
-                         (throw (Exception. "Missing config field ARCHIVE_READ_S3_BUCKET")))
-         ;; Search s3 for all keys at the location
-         search-results (s3/list-objects creds
-                                         :bucket-name bucket-name
-                                         :prefix location
-                                         :marker marker)
-         ;; Grab the keys and optionally filter them
-         keys ((or filter-fn identity) (get-keys-from-results search-results))
-         values (pmap #(lookup-key creds bucket-name location %) keys)]
-     ;; If there is a next marker then we should recur
-     (if-let [next-marker (:next-marker search-results)]
-       (do (storm/log-message "Paging archive results at " location)
-           (concat values
-                   (filter-from-backend conf location {:filter-fn filter-fn
-                                                       :marker next-marker})))
-       values)))))
+          ;; For backwards compatibility look for the old key as fallback
+          bucket-name (or (get conf "ARCHIVE_READ_S3_BUCKET")
+                          (get conf "S3_BUCKET")
+                          (throw (Exception. "Missing config field ARCHIVE_READ_S3_BUCKET")))
+          max-keys (if-let [n-keys (get conf "ARCHIVE_READ_S3_MAX_KEYS")]
+                     (Float. n-keys)
+                     1000)
+          ;; Search s3 for all keys at the location
+          search-results (s3/list-objects creds
+                                          :bucket-name bucket-name
+                                          :prefix location
+                                          :marker marker
+                                          :max-keys max-keys)
+          ;; Grab the keys and optionally filter them
+          ks ((or filter-fn identity) (get-keys-from-results search-results))
+          values (pmap #(lookup-key creds bucket-name location %) ks)]
+      ;; If there is a next marker then we should recur
+      (if-let [next-marker (:next-marker search-results)]
+        (do (storm/log-message "Paging archive results at " location)
+            (concat values
+                    (filter-from-backend conf location (assoc opts :marker next-marker))))
+        values)))))

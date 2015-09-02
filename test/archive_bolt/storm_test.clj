@@ -1,9 +1,12 @@
 (ns archive-bolt.storm-test
-  (:require [clojure.test :refer :all] 
+  (:require [clojure.test :refer :all]
             [backtype.storm.clojure :refer :all]
             [backtype.storm.testing :refer :all]
             [amazonica.aws.s3 :refer [get-object delete-object]]
-            [archive-bolt.storm :refer [archive archive-read archive-read-filtered]]
+            [archive-bolt.storm :refer [archive
+                                        archive-read
+                                        archive-read-filtered
+                                        archive-read-chunked]]
             [archive-bolt.fields :refer [archive-input-fields
                                          archive-read-input-fields
                                          archive-output-fields]]
@@ -42,6 +45,13 @@
    {"1" (spout-spec mock-read-spout)}
    {"2" (bolt-spec {"1" :shuffle} (archive-read-filtered `test-filter-fn))}))
 
+(defn mk-test-read-chunked-topology
+  "Returns a Storm topology for testing the archive bolt"
+  []
+  (topology
+   {"1" (spout-spec mock-read-spout)}
+   {"2" (bolt-spec {"1" :shuffle} (archive-read-chunked 1))}))
+
 (deftest test-archive-write-bolt
   "Test the topology on a local cluster"
   (with-simulated-time-local-cluster [cluster]
@@ -58,10 +68,10 @@
           expected (get-object test-creds test-bucket-name test-location)
           expected-content (-> expected :input-stream slurp)]
       ;; Clean up
-      (delete-object test-creds test-bucket-name test-location)      
+      (delete-object test-creds test-bucket-name test-location)
       ;; Verify that the side effect of writing to s3 worked
       (is (= test-content-str expected-content))
-      ;; Check the output of the bolt matches expected tuple output      
+      ;; Check the output of the bolt matches expected tuple output
       ;; Order is not guaranteed so we are using the built in storm
       ;; equality function ms= rather than =
       (is (ms= [[{} (str "s3://" test-bucket-name "/" test-location)]]
@@ -74,7 +84,6 @@
              ;; This becomes the input to the archive bolt
              mock-sources {"1" [[{} "s3" test-location]]}
              topo (mk-test-read-topology)
-             bucket-name "dev.shareablee.com"
              results (complete-topology cluster
                                         topo
                                         :storm-conf test-conf
@@ -83,7 +92,7 @@
                                :full-path test-key
                                :file-name test-file-name}
                         :value test-content}]]
-         ;; Check the output of the bolt matches expected tuple output      
+         ;; Check the output of the bolt matches expected tuple output
          ;; Order is not guaranteed so we are using the built in storm
          ;; equality function ms= rather than =
          (is (ms= [[{} expected]]
@@ -95,7 +104,6 @@
        (let [test-conf (get-test-conf)
              mock-sources {"1" [[{} "s3" test-location]]}
              topo (mk-test-read-filtered-topology)
-             bucket-name (get test-conf "S3_BUCKET")
              results (complete-topology cluster
                                         topo
                                         :storm-conf test-conf
@@ -104,7 +112,27 @@
                                :full-path test-key
                                :file-name test-file-name}
                         :value test-content}]]
-         ;; Check the output of the bolt matches expected tuple output      
+         ;; Check the output of the bolt matches expected tuple output
+         ;; Order is not guaranteed so we are using the built in storm
+         ;; equality function ms= rather than =
+         (is (ms= [[{} expected]]
+                  (read-tuples results "2")))))))
+
+(deftest test-archive-read-chunked-bolt
+  (with-s3-key
+    #(with-simulated-time-local-cluster [cluster]
+       (let [test-conf (get-test-conf)
+             mock-sources {"1" [[{} "s3" test-location]]}
+             topo (mk-test-read-chunked-topology)
+             results (complete-topology cluster
+                                        topo
+                                        :storm-conf test-conf
+                                        :mock-sources mock-sources)
+             expected [{:meta {:location test-location
+                               :full-path test-key
+                               :file-name test-file-name}
+                        :value test-content}]]
+         ;; Check the output of the bolt matches expected tuple output
          ;; Order is not guaranteed so we are using the built in storm
          ;; equality function ms= rather than =
          (is (ms= [[{} expected]]
