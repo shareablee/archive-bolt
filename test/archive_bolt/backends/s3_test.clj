@@ -77,14 +77,16 @@
 
 (defn mock-list-objects
   [_ & {:keys [bucket-name prefix marker]}]
-  (if (= marker 123)
-    {:object-summaries [{:key "foo"}] :next-marker nil}
-    {:object-summaries [{:key "bar"}] :next-marker 123}))
+  (if-not marker
+    {:object-summaries [{:key "foo"}] :next-marker 123}
+    (condp = marker
+      123 {:object-summaries [{:key "bar"}] :next-marker 456}
+      456 {:object-summaries [{:key "baz"}] :next-marker nil})))
 
 (deftest test-filter-from-backend-pagination
   "Test paging through results of searching s3 without actually hitting s3"
   (with-redefs [s3/list-objects mock-list-objects
                 s3-backend/lookup-key (fn [_ _ _ k] k)]
-    (is (= ["bar" "foo"]
+    (is (= ["foo" "bar" "baz"]
            (take-while (comp not nil?)
                        (backend/filter-from-backend :s3 (get-test-conf) test-location))))))
