@@ -30,4 +30,4 @@
 
 (defmethod filter-from-backend :s3
   [_ conf location & [pred-fn]]
-  (s3/filter-from-backend conf location pred-fn))
+  (s3/filter-from-backend conf location {:filter-fn pred-fn}))

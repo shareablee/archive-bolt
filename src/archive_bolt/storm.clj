@@ -2,7 +2,7 @@
   (:require [backtype.storm.clojure :refer [defbolt bolt emit-bolt! ack! fail!]]
             [backtype.storm.log :refer [log-debug log-warn]]
             [archive-bolt.backends.core :refer [store filter-from-backend]]
-            [archive-bolt.fields :as fields]) 
+            [archive-bolt.fields :as fields])
   (:gen-class))
 
 
@@ -32,7 +32,8 @@
   [conf collector tuple & [filter-fn]]
   (let [{:keys [meta backend location]} tuple
         filter-fn (or filter-fn identity)
-        results (filter-from-backend backend conf location filter-fn)]
+        results (take-while (comp not nil?)
+                            (filter-from-backend backend conf location {:filter-fn filter-fn}))]
     (if (seq results)
       (emit-bolt! collector [meta results] :anchor tuple)
       (log-debug (format "No results returned from %s backend at %s"
@@ -51,3 +52,15 @@
   {:prepare true :params [filter-fn]}
   [conf context collector]
   (bolt (execute [tuple] (-archive-read conf collector tuple (resolve filter-fn)))))
+
+(defbolt archive-read-chunked fields/archive-read-output-fields
+  {:prepare true :params [chunk-n]}
+  [conf context collector]
+  (bolt
+   (execute
+    [tuple]
+    (let [{:keys [meta backend location]} tuple
+          results (filter-from-backend backend conf location)]
+      (doseq [r (partition-all chunk-n (take-while (comp not nil?) results))]
+        (emit-bolt! collector [meta results] :anchor tuple))
+      (ack! collector tuple)))))

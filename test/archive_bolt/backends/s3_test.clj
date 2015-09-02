@@ -52,11 +52,12 @@
 
 (deftest test-filter-from-backend
   (with-s3-key
-    #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
-            [{:meta {:location test-location
-                    :full-path test-key
-                    :file-name test-file-name}
-              :value test-content}]))))
+    #(is (= [{:meta {:location test-location
+                     :full-path test-key
+                     :file-name test-file-name}
+              :value test-content}]
+            (take-while (comp not nil?)
+                        (backend/filter-from-backend :s3 (get-test-conf) test-location))))))
 
 (deftest test-filter-from-backend-no-results)
   #(is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
@@ -67,10 +68,11 @@
                                   {:object-summaries [{:key "foo"} {:key "foo"}]
                                    :next-marker nil})
                 s3-backend/lookup-key (fn [_ _ _ k] {k k})]
-    (is (= (backend/filter-from-backend :s3
-                                        (get-test-conf)
-                                        test-location
-                                        (fn [coll] (set coll)))
+    (is (= (take-while (comp not nil?)
+                       (backend/filter-from-backend :s3
+                                                    (get-test-conf)
+                                                    test-location
+                                                    (fn [coll] (set coll))))
            [{"foo" "foo"}]))))
 
 (defn mock-list-objects
@@ -82,6 +84,7 @@
 (deftest test-filter-from-backend-pagination
   "Test paging through results of searching s3 without actually hitting s3"
   (with-redefs [s3/list-objects mock-list-objects
-                s3-backend/lookup-key (fn [_ _ _ k] {k k})]
-    (is (= (backend/filter-from-backend :s3 (get-test-conf) test-location)
-           [{"bar" "bar"} {"foo" "foo"}]))))
+                s3-backend/lookup-key (fn [_ _ _ k] k)]
+    (is (= ["bar" "foo"]
+           (take-while (comp not nil?)
+                       (backend/filter-from-backend :s3 (get-test-conf) test-location))))))

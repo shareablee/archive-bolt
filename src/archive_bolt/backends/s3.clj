@@ -1,5 +1,5 @@
 (ns archive-bolt.backends.s3
-  (:require [backtype.storm.log :as storm] 
+  (:require [backtype.storm.log :as storm]
             [amazonica.aws.s3 :as s3]
             [archive-bolt.utils :refer [get-or-throw]]
             [cheshire.core :as json]
@@ -23,14 +23,14 @@
     (str "s3://" bucket "/" location)))
 
 (defn safe-put
-  "Attempt to PUT the file to s3 returns full s3 path when successful or 
+  "Attempt to PUT the file to s3 returns full s3 path when successful or
    nil if unsuccessful. Retries on failure up to max-retries times."
   [creds bucket location content
    & {:keys [retry-count max-retries wait-time]
       :or {retry-count 0, max-retries 10 wait-time 1000}}]
   ;; Store the content and return the location
   (try
-    (put-object creds bucket location content) 
+    (put-object creds bucket location content)
     (catch Exception e
       (do (Thread/sleep wait-time)
           (storm/log-error e " Failed to store in s3. "
@@ -68,7 +68,7 @@
    :value (try (-> (s3/get-object credentials
                                   :bucket-name bucket-name
                                   :key key)
-                   :input-stream 
+                   :input-stream
                    slurp
                    (json/parse-string true))
                (catch Exception e
@@ -76,29 +76,39 @@
                   (format "Failed to get bucket: %s, key: %s, error: %s "
                           bucket-name key e))))})
 
+;; TODO add an option to set the pagination value and lazy concat
+;; results together should give enough control to avoid out of memory issues
+
 (defn filter-from-backend
   "Search s3 for keys at the given location. Take the list of keys and look
    them up. If the results are paginated, recur until all results are returned.
-   Results are paginated by 1,000 keys as per the S3 API docs. Results keys are 
-   filtered by filter-fn. Returns a collection of results."
-  [conf location & [filter-fn accum marker]]
-  (let [creds (mk-credentials conf)
-        ;; For backwards compatibility look for the old key as fallback
-        bucket-name (or (get conf "ARCHIVE_READ_S3_BUCKET")
-                        (get conf "S3_BUCKET")
-                        (throw (Exception. "Missing config field ARCHIVE_READ_S3_BUCKET")))
-        ;; Search s3 for all keys at the location
-        search-results (s3/list-objects creds
-                                        :bucket-name bucket-name
-                                        :prefix location
-                                        :marker marker)
-        ;; Grab the keys and optionally filter them
-        keys ((or filter-fn identity) (get-keys-from-results search-results))
-        values (pmap #(lookup-key creds bucket-name location %) keys)
-        result (concat accum values)]
-    ;; If there is a next marker then we should recur
-    (if-let [next-marker (:next-marker search-results)] 
-      ;; NOTE optional args must be in a vector when using recur
-      (do (storm/log-message "Paging archive results at " location)
-          (recur conf location [filter-fn result next-marker]))
-      result)))
+   Results are paginated by 1,000 keys as per the S3 API docs. Results keys are
+  filtered by filter-fn. Returns a lazy seq of results."
+  ([conf location]
+   (filter-from-backend conf location nil {}))
+  ([conf location {:keys [filter-fn marker] :as opts}]
+   (filter-from-backend conf location nil opts))
+  ([conf location accum {:keys [filter-fn marker] :as opts}]
+   (let [creds (mk-credentials conf)
+         ;; For backwards compatibility look for the old key as fallback
+         bucket-name (or (get conf "ARCHIVE_READ_S3_BUCKET")
+                         (get conf "S3_BUCKET")
+                         (throw (Exception. "Missing config field ARCHIVE_READ_S3_BUCKET")))
+         ;; Search s3 for all keys at the location
+         search-results (s3/list-objects creds
+                                         :bucket-name bucket-name
+                                         :prefix location
+                                         :marker marker)
+         ;; Grab the keys and optionally filter them
+         keys ((or filter-fn identity) (get-keys-from-results search-results))
+         values (pmap #(lookup-key creds bucket-name location %) keys)]
+     ;; If there is a next marker then we should recur
+     (if-let [next-marker (:next-marker search-results)]
+       (do (storm/log-message "Paging archive results at " location)
+           (lazy-cat accum
+                     (filter-from-backend conf
+                                          location
+                                          (lazy-cat accum values)
+                                          {:filter-fn filter-fn
+                                           :marker next-marker})))
+       (lazy-cat accum values)))))
