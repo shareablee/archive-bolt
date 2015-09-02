@@ -105,10 +105,6 @@
      ;; If there is a next marker then we should recur
      (if-let [next-marker (:next-marker search-results)]
        (do (storm/log-message "Paging archive results at " location)
-           (lazy-cat accum
-                     (filter-from-backend conf
-                                          location
-                                          (lazy-cat accum values)
-                                          {:filter-fn filter-fn
-                                           :marker next-marker})))
+           (recur conf location (lazy-cat accum values) {:filter-fn filter-fn
+                                                         :marker next-marker}))
        (lazy-cat accum values)))))
